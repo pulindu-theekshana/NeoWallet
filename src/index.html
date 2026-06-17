@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- CSP: allows fetch to Flask on localhost, and Chart.js from CDN -->
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self' 'unsafe-inline' 'unsafe-eval';
+             connect-src http://127.0.0.1:5000;
+             script-src  'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net;
+             img-src     'self' data: blob:;">
+  <title>ExpenseTrack</title>
+  <link rel="stylesheet" href="index.css">
+  <!-- Chart.js for the Reports page -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <!-- ═══ SIDEBAR ═══ -->
+  <aside class="sidebar">
+    <div class="logo">
+      <span class="logo-icon">💰</span>
+      <span class="logo-text">ExpenseTrack</span>
+    </div>
+    <nav>
+      <a class="nav-item active" data-page="dashboard">
+        <span class="nav-icon">🏠</span> Dashboard
+      </a>
+      <a class="nav-item" data-page="transactions">
+        <span class="nav-icon">📋</span> Transactions
+      </a>
+      <a class="nav-item" data-page="reports">
+        <span class="nav-icon">📊</span> Reports
+      </a>
+      <a class="nav-item" data-page="budgets">
+        <span class="nav-icon">🎯</span> Budgets
+      </a>
+      <a class="nav-item" data-page="settings">
+        <span class="nav-icon">⚙️</span> Settings
+      </a>
+    </nav>
+  </aside>
+
+  <!-- ═══ MAIN CONTENT ═══ -->
+  <main class="main-content">
+
+    <!-- Full-screen loader shown while Flask starts up -->
+    <div id="loading-screen" class="loading-screen">
+      <div class="spinner"></div>
+      <p>Starting backend…</p>
+    </div>
+
+    <div id="page-dashboard"    class="page hidden"></div>
+    <div id="page-transactions" class="page hidden"></div>
+    <div id="page-reports"      class="page hidden"></div>
+    <div id="page-budgets"      class="page hidden"></div>
+    <div id="page-settings"     class="page hidden"></div>
+
+  </main>
+
+  <!-- ═══ ADD / EDIT MODAL ═══ -->
+  <div id="modal-overlay" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-title">Add Expense</h3>
+        <button id="modal-close" class="modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="trans-id">
+        <div class="form-group">
+          <label>Title</label>
+          <input type="text" id="trans-title" placeholder="e.g. Keells Super">
+        </div>
+        <div class="form-group">
+          <label>Amount (LKR)</label>
+          <input type="number" id="trans-amount" placeholder="0" min="0" step="1">
+        </div>
+        <div class="form-group">
+          <label>Category</label>
+          <select id="trans-category">
+            <option>Groceries</option>
+            <option>Utilities</option>
+            <option>Transport</option>
+            <option>Dining</option>
+            <option>Shopping</option>
+            <option>Healthcare</option>
+            <option>Entertainment</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" id="trans-date">
+        </div>
+        <div class="form-group">
+          <label>Note (optional)</label>
+          <input type="text" id="trans-note" placeholder="Add a note…">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-cancel" class="btn-secondary">Cancel</button>
+        <button id="btn-save"   class="btn-primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
