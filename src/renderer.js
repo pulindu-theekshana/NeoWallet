@@ -406,7 +406,7 @@ function renderSettings() {
       </div>
       <div class="settings-section">
         <h3>About</h3>
-        <div class="settings-row"><span class="settings-key">App</span><span class="settings-val">ExpenseTrack — Desktop Edition</span></div>
+        <div class="settings-row"><span class="settings-key">App</span><span class="settings-val">NeoWallet — Desktop Edition</span></div>
         <div class="settings-row"><span class="settings-key">Built with</span><span class="settings-val">Electron · Flask · SQLite</span></div>
       </div>
     </div>`;
@@ -424,11 +424,17 @@ function renderSettings() {
     } catch { toast('Export failed', 'error'); }
   };
 
-  document.getElementById('s-clear').onclick = () => {
+document.getElementById('s-clear').onclick = async () => {
     if (confirm('Delete ALL transactions and budgets? This cannot be undone.')) {
-      toast('(Clear function — wire to a DELETE /api/all endpoint if needed)', 'error');
+        try {
+            await DELETE('/clear');
+            toast('All data cleared!');
+            navigate('dashboard');
+        } catch {
+            toast('Failed to clear data', 'error');
+        }
     }
-  };
+};
 }
 
 // ════════════════════════════════════════════════════════════

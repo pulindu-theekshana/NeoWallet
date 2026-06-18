@@ -13,7 +13,7 @@ if getattr(sys, 'frozen', False):
     # Running as a PyInstaller bundle (production)
     data_dir = os.path.join(
         os.environ.get('APPDATA', os.path.expanduser('~')),
-        'ExpenseTrack'
+        'NeoWallet'
     )
     os.makedirs(data_dir, exist_ok=True)
     BASE_DIR = data_dir

@@ -4,8 +4,8 @@ const { FuseV1Options, FuseVersion } = require('@electron/fuses');
 module.exports = {
   packagerConfig: {
     asar: true,
-    name: 'ExpenseTrack',
-    executableName: 'ExpenseTrack',
+    name: 'NeoWallet',
+    executableName: 'NeoWallet',
 
     // The app icon (.ico extension is added automatically for Windows)
     icon: './assets/icon',
@@ -25,8 +25,8 @@ module.exports = {
       // Windows installer (creates ExpenseTrackSetup.exe)
       name: '@electron-forge/maker-squirrel',
       config: {
-        name:        'ExpenseTrack',
-        setupExe:    'ExpenseTrackSetup.exe',
+        name:        'NeoWallet',
+        setupExe:    'NeoWalletSetup.exe',
         setupIcon:   './assets/icon.ico',
         authors:     'Your Name',
         description: 'Personal Expense Tracker',

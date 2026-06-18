@@ -173,6 +173,19 @@ def get_reports():
     conn.close()
     return jsonify({'monthly_spending': monthly, 'category_breakdown': by_cat})
 
+@app.route('/api/clear', methods=['DELETE'])
+def clear_all_data():
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("DELETE FROM transactions")
+    c.execute("DELETE FROM budgets")
+    try:
+        c.execute("DELETE FROM sqlite_sequence WHERE name IN ('transactions', 'budgets')")
+    except Exception:
+        pass  # table might not exist yet, that's fine
+    conn.commit()
+    conn.close()
+    return jsonify({'message': 'All data cleared'})
 
 if __name__ == '__main__':
     print('[Flask] Starting on http://127.0.0.1:5000')

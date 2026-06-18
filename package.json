@@ -1,8 +1,8 @@
 {
-  "name": "expense-tracker",
-  "productName": "expense-tracker",
+  "name": "NeoWallet",
+  "productName": "NeoWallet",
   "version": "1.0.0",
-  "description": "My Electron application description",
+  "description": "Keep tracking you expenses",
   "main": "src/index.js",
   "private": true,
   "scripts": {
@@ -23,8 +23,8 @@
     "electron-squirrel-startup": "^1.0.1"
   },
   "build": {
-    "appId": "com.expensetrack.app",
-    "productName": "ExpenseTrack",
+    "appId": "com.NeoWallet.app",
+    "productName": "NeoWallet",
     "directories": {
       "output": "out/installer"
     },
@@ -64,7 +64,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "ExpenseTrack",
+      "shortcutName": "NeoWallet",
       "installerIcon": "assets/icon.ico",
       "uninstallerIcon": "assets/icon.ico"
     },
