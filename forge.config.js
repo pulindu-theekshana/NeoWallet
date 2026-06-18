@@ -4,12 +4,34 @@ const { FuseV1Options, FuseVersion } = require('@electron/fuses');
 module.exports = {
   packagerConfig: {
     asar: true,
+    name: 'ExpenseTrack',
+    executableName: 'ExpenseTrack',
+
+    // The app icon (.ico extension is added automatically for Windows)
+    icon: './assets/icon',
+
+    // Extra files to include alongside your app (NOT inside asar)
+    // These land in the "resources/" folder of the installed app
+    extraResource: [
+      './backend/dist/flask_backend.exe',   // ← the bundled Python server
+      './assets/icon.ico',                   // ← icon (for the window titlebar)
+    ],
   },
+
   rebuildConfig: {},
+
   makers: [
     {
+      // Windows installer (creates ExpenseTrackSetup.exe)
       name: '@electron-forge/maker-squirrel',
-      config: {},
+      config: {
+        name:        'ExpenseTrack',
+        setupExe:    'ExpenseTrackSetup.exe',
+        setupIcon:   './assets/icon.ico',
+        authors:     'Your Name',
+        description: 'Personal Expense Tracker',
+        // noMsi: true,  // Uncomment if you don't want an .msi file
+      },
     },
     {
       name: '@electron-forge/maker-zip',
@@ -24,13 +46,12 @@ module.exports = {
       config: {},
     },
   ],
+
   plugins: [
     {
       name: '@electron-forge/plugin-auto-unpack-natives',
       config: {},
     },
-    // Fuses are used to enable/disable various Electron functionality
-    // at package time, before code signing the application
     new FusesPlugin({
       version: FuseVersion.V1,
       [FuseV1Options.RunAsNode]: false,

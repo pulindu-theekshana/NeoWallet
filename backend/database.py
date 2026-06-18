@@ -1,13 +1,34 @@
 import sqlite3
 import os
+import sys
 
-# Database will be saved in the backend folder as expenses.db
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'expenses.db')
+# ─────────────────────────────────────────────────────────────
+#  Where to store the database
+#  - Development (npm start)  → backend/expenses.db  (as before)
+#  - Production  (installed)  → C:\Users\You\AppData\Roaming\ExpenseTrack\expenses.db
+#    This means data survives app updates and reinstalls!
+# ─────────────────────────────────────────────────────────────
+
+if getattr(sys, 'frozen', False):
+    # Running as a PyInstaller bundle (production)
+    data_dir = os.path.join(
+        os.environ.get('APPDATA', os.path.expanduser('~')),
+        'ExpenseTrack'
+    )
+    os.makedirs(data_dir, exist_ok=True)
+    BASE_DIR = data_dir
+else:
+    # Running normally in development
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+DB_PATH = os.path.join(BASE_DIR, 'expenses.db')
+
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row  # This lets us access columns by name
+    conn.row_factory = sqlite3.Row
     return conn
+
 
 def init_db():
     conn = get_db()
@@ -60,4 +81,4 @@ def init_db():
 
     conn.commit()
     conn.close()
-    print('[DB] Database ready.')
+    print(f'[DB] Ready. Database at: {DB_PATH}')
