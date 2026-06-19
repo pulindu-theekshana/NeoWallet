@@ -17,13 +17,63 @@ const S = {
 
 // ── Category meta ───────────────────────────────────────────
 const CAT_COLORS = {
-  Groceries:     '#10b981', Utilities:  '#3b82f6', Transport:     '#f59e0b',
-  Dining:        '#ec4899', Shopping:   '#06b6d4', Healthcare:    '#ef4444',
-  Entertainment: '#f97316', Other:      '#8b5cf6',
+  Groceries:     '#22c55e',
+  Utilities:     '#38bdf8',
+  Transport:     '#f97316',
+  Dining:        '#fbbf24',
+  Shopping:      '#f472b6',
+  Healthcare:    '#ef4444',
+  Entertainment: '#c084fc',
+  Education:     '#06b6d4',
+  Sports:        '#84cc16',
+  Other:         '#818cf8',
 };
 const CAT_ICONS = {
-  Groceries: '🛒', Utilities: '⚡', Transport: '🚌', Dining: '☕',
-  Shopping:  '🛍️', Healthcare: '🏥', Entertainment: '🎮', Other: '📦',
+  Groceries: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+  </svg>`,
+
+  Utilities: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+  </svg>`,
+
+  Transport: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+   stroke-linejoin="round" class="lucide lucide-car-icon lucide-car">
+   <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/>
+   <circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>`,
+
+  Dining: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+   stroke-linejoin="round" class="lucide lucide-utensils-icon lucide-utensils"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/>
+  <path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>`,
+
+  Shopping: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+    <line x1="3" y1="6" x2="21" y2="6"/>
+    <path d="M16 10a4 4 0 0 1-8 0"/>
+  </svg>`,
+
+  Healthcare: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" 
+  class="lucide lucide-heart-plus-icon lucide-heart-plus"><path d="m14.479 19.374-.971.939a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5a5.2 5.2 0 0 1-.219 1.49"/>
+  <path d="M15 15h6"/><path d="M18 12v6"/></svg>`,
+
+  Entertainment: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+   stroke-linejoin="round" class="lucide lucide-headset-icon lucide-headset">
+   <path d="M3 11h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-5Zm0 0a9 9 0 1 1 18 0m0 0v5a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3Z"/>
+   <path d="M21 16v2a4 4 0 0 1-4 4h-5"/></svg>`,
+
+  Education: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+   stroke-linejoin="round" class="lucide lucide-graduation-cap-icon lucide-graduation-cap">
+  <path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/></svg>`,
+
+  Sports: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" 
+  class="lucide lucide-volleyball-icon lucide-volleyball"><path d="M11 7a16 16 20 0 1 10.98 4.362"/><path d="M12 12a13 13 0 0 1-8.66 5"/><path d="M16.83 13.634a16 16 0 0 1-9.267 7.328"/>
+  <path d="M20.66 17A13 13 0 0 0 12 12a13 13 0 0 1 0-10"/><path d="M8.17 15.366a16 16 0 0 1-1.713-11.69"/><circle cx="12" cy="12" r="10"/></svg>`,
+
+  Other: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" 
+  class="lucide lucide-boxes-icon lucide-boxes"><path d="M2.97 12.92A2 2 0 0 0 2 14.63v3.24a2 2 0 0 0 .97 1.71l3 1.8a2 2 0 0 0 2.06 0L12 19v-5.5l-5-3-4.03 2.42Z"/><path d="m7 16.5-4.74-2.85"/><path d="m7 16.5 5-3"/>
+  <path d="M7 16.5v5.17"/><path d="M12 13.5V19l3.97 2.38a2 2 0 0 0 2.06 0l3-1.8a2 2 0 0 0 .97-1.71v-3.24a2 2 0 0 0-.97-1.71L17 10.5l-5 3Z"/><path d="m17 16.5-5-3"/><path d="m17 16.5 4.74-2.85"/><path d="M17 16.5v5.17"/>
+  <path d="M7.97 4.42A2 2 0 0 0 7 6.13v4.37l5 3 5-3V6.13a2 2 0 0 0-.97-1.71l-3-1.8a2 2 0 0 0-2.06 0l-3 1.8Z"/><path d="M12 8 7.26 5.15"/><path d="m12 8 4.74-2.85"/><path d="M12 13.5V8"/></svg>`,
 };
 const MONTHS = ['January','February','March','April','May','June',
                 'July','August','September','October','November','December'];
@@ -41,7 +91,7 @@ function toast(msg, type = 'success') {
   t.className = `toast ${type}`;
   t.textContent = msg;
   document.body.appendChild(t);
-  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 350); }, 2400);
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 350); }, 3200);
 }
 
 // ── API helpers ──────────────────────────────────────────────
@@ -144,7 +194,8 @@ async function renderDashboard() {
 }
 
 function buildRecentList(items) {
-  if (!items?.length) return '<div class="empty"><div class="empty-icon">📭</div><p>No transactions this month</p></div>';
+  if (!items?.length) return `<div class="empty"><div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></div><p>No transactions this month</p></div>`;
   return '<div class="trans-list">' + items.map(t => `
     <div class="trans-item">
       <div class="trans-icon ${catBgClass(t.category)}">${catIcon(t.category)}</div>
@@ -157,7 +208,8 @@ function buildRecentList(items) {
 }
 
 function buildCatBars(cats, total, budgetPct) {
-  if (!cats?.length) return '<div class="empty"><div class="empty-icon">📊</div><p>No data yet</p></div>';
+  if (!cats?.length) return `<div class="empty"><div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg></div><p>No data yet</p></div>`;
   const bars = cats.map(c => {
     const pct = total > 0 ? (c.total / total) * 100 : 0;
     const col = catColor(c.category);
@@ -186,7 +238,7 @@ async function renderTransactions() {
     const catParam = S.catFilter ? `&category=${encodeURIComponent(S.catFilter)}` : '';
     const rows = await GET(`/transactions?month=${S.month}&year=${S.year}${catParam}`);
 
-    const catOptions = ['Groceries','Utilities','Transport','Dining','Shopping','Healthcare','Entertainment','Other']
+    const catOptions = ['Groceries','Utilities','Transport','Dining','Shopping','Healthcare','Entertainment','Education','Sports','Other']
       .map(c => `<option value="${c}" ${S.catFilter===c?'selected':''}>${c}</option>`).join('');
 
     el.innerHTML = `
@@ -209,7 +261,8 @@ async function renderTransactions() {
 
       <div class="card table-wrap">
         ${rows.length === 0
-          ? '<div class="empty"><div class="empty-icon">📭</div><p>No transactions found</p></div>'
+          ? `<div class="empty"><div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></div><p>No transactions found</p></div>`
           : `<table class="data-table">
               <thead><tr>
                 <th>Title</th><th>Category</th><th>Date</th><th>Amount</th><th>Note</th><th>Actions</th>
@@ -226,8 +279,12 @@ async function renderTransactions() {
                     <td style="color:var(--red);font-weight:600">-${fmtCurrency(t.amount)}</td>
                     <td style="color:var(--text-muted)">${t.note || '—'}</td>
                     <td>
-                      <button class="act-btn edi" data-id="${t.id}">✏️</button>
-                      <button class="act-btn del" data-id="${t.id}">🗑️</button>
+                      <button class="act-btn edi" data-id="${t.id}" title="Edit">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      </button>
+                      <button class="act-btn del" data-id="${t.id}" title="Delete">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                      </button>
                     </td>
                   </tr>`).join('')}
               </tbody>
@@ -342,7 +399,8 @@ async function renderBudgets() {
         <div class="card">
           <div class="card-title">All Saved Budgets</div>
           ${budgets.length === 0
-            ? '<div class="empty"><div class="empty-icon">🎯</div><p>No budgets set yet</p></div>'
+            ? `<div class="empty"><div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div><p>No budgets set yet</p></div>`
             : `<table class="data-table">
                 <thead><tr><th>Month</th><th>Year</th><th>Budget</th></tr></thead>
                 <tbody>
@@ -493,7 +551,7 @@ function nextMonth(cb) {
 }
 
 function errState(msg) {
-  return `<div class="empty"><div class="empty-icon">❌</div><p>${msg}</p></div>`;
+  return `<div class="empty"><div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div><p>${msg}</p></div>`;
 }
 
 // ════════════════════════════════════════════════════════════
@@ -505,6 +563,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     el.addEventListener('click', e => { e.preventDefault(); navigate(el.dataset.page); }));
 
   // Wire up modal buttons
+    // Auto-capitalize first letter of transaction title
+  document.getElementById('trans-title').addEventListener('input', function () {
+    if (this.value.length > 0) {
+      const pos = this.selectionStart;
+      this.value = this.value.charAt(0).toUpperCase() + this.value.slice(1);
+      this.setSelectionRange(pos, pos);
+    }
+  });
   document.getElementById('modal-close').onclick = closeModal;
   document.getElementById('btn-cancel').onclick  = closeModal;
   document.getElementById('btn-save').onclick    = saveModal;

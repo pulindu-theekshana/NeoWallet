@@ -66,14 +66,16 @@ def init_db():
     ''')
 
     default_categories = [
-        ('Groceries',     '🛒', '#10b981'),
-        ('Utilities',     '⚡', '#3b82f6'),
-        ('Transport',     '🚌', '#f59e0b'),
-        ('Dining',        '☕', '#ec4899'),
-        ('Shopping',      '🛍️', '#06b6d4'),
+        ('Groceries',     '🛒', '#22c55e'),
+        ('Utilities',     '⚡', '#38bdf8'),
+        ('Transport',     '🚌', '#f97316'),
+        ('Dining',        '☕', '#fbbf24'),
+        ('Shopping',      '🛍️', '#f472b6'),
         ('Healthcare',    '🏥', '#ef4444'),
-        ('Entertainment', '🎮', '#f97316'),
-        ('Other',         '📦', '#8b5cf6'),
+        ('Entertainment', '🎮', '#c084fc'),
+        ('Education',     '📚', '#06b6d4'),
+        ('Sports',        '🏆', '#84cc16'),
+        ('Other',         '📦', '#818cf8'),
     ]
 
     for cat in default_categories:
