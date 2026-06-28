@@ -2,13 +2,75 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from database import get_db, init_db
 from datetime import datetime
+import os
+import secrets as _secrets
 
 app = Flask(__name__)
 CORS(app)  # Allows Electron to talk to Flask
 
+# Token injected by Electron at startup via environment variable
+_API_TOKEN = os.environ.get('EXPENSE_API_TOKEN', '')
+
+if not _API_TOKEN:
+    print('[WARNING] EXPENSE_API_TOKEN is not set. API is running unprotected.')
+    print('[WARNING] This is fine for development but should never happen in production.')
+
+@app.before_request
+def check_token():
+    """Reject requests that don't carry the correct token.
+       Skips the health check so the renderer can poll before it has the token."""
+    if request.method == 'OPTIONS':
+        return  # let Flask-CORS handle preflight requests
+    if request.path == '/api/health':
+        return  # health check is public
+    incoming = request.headers.get('X-API-Token', '')
+    if _API_TOKEN and not _secrets.compare_digest(incoming, _API_TOKEN):
+        return jsonify({'error': 'Unauthorized'}), 401
+
 # Initialize the database on startup
 init_db()
 
+# ── Valid values ──────────────────────────────────────────────
+VALID_CATEGORIES = {
+    'Groceries', 'Utilities', 'Transport', 'Dining', 'Shopping',
+    'Healthcare', 'Entertainment', 'Education', 'Sports', 'Other'
+}
+
+def validate_transaction(d):
+    """Returns list of error strings. Empty list means valid."""
+    if not isinstance(d, dict):
+        return ['Invalid transaction data']
+
+    errors = []
+
+    title = str(d.get('title', '')).strip()
+    if not title:
+        errors.append('Title is required')
+    elif len(title) > 100:
+        errors.append('Title must be 100 characters or less')
+
+    try:
+        amount = float(d.get('amount', 0))
+        if amount <= 0:
+            errors.append('Amount must be greater than zero')
+        if amount > 99999999:
+            errors.append('Amount is too large')
+    except (TypeError, ValueError):
+        errors.append('Amount must be a valid number')
+
+    if d.get('category') not in VALID_CATEGORIES:
+        errors.append(f'Invalid category')
+
+    try:
+        datetime.strptime(str(d.get('date', '')), '%Y-%m-%d')
+    except ValueError:
+        errors.append('Date must be in YYYY-MM-DD format')
+
+    note = str(d.get('note', ''))
+    if len(note) > 200:
+        errors.append('Note must be 200 characters or less')
+
+    return errors
 
 @app.route('/api/health')
 def health():
@@ -85,9 +147,42 @@ def get_transactions():
     return jsonify(rows)
 
 
+@app.route('/api/transactions/import', methods=['POST'])
+def import_transactions():
+    rows = request.get_json()
+    if not isinstance(rows, list):
+        return jsonify({'error': 'Expected a list'}), 400
+
+    inserted = 0
+    skipped  = 0
+    conn = get_db()
+    c = conn.cursor()
+
+    for d in rows:
+        errors = validate_transaction(d)
+        if errors:
+            skipped += 1
+            continue
+        c.execute(
+            "INSERT INTO transactions (title, amount, category, date, note) VALUES (?,?,?,?,?)",
+            (str(d['title']).strip(), float(d['amount']),
+             d['category'], d['date'], str(d.get('note', '')).strip())
+        )
+        inserted += 1
+
+    conn.commit()
+    conn.close()
+    return jsonify({'inserted': inserted, 'skipped': skipped})
+
+
 @app.route('/api/transactions', methods=['POST'])
 def add_transaction():
     d = request.get_json()
+    if not d:
+        return jsonify({'error': 'No data provided'}), 400
+    errors = validate_transaction(d)
+    if errors:
+        return jsonify({'error': errors[0]}), 400
     conn = get_db()
     c = conn.cursor()
     c.execute("INSERT INTO transactions (title,amount,category,date,note) VALUES (?,?,?,?,?)",
@@ -101,6 +196,11 @@ def add_transaction():
 @app.route('/api/transactions/<int:tid>', methods=['PUT'])
 def update_transaction(tid):
     d = request.get_json()
+    if not d:
+        return jsonify({'error': 'No data provided'}), 400
+    errors = validate_transaction(d)
+    if errors:
+        return jsonify({'error': errors[0]}), 400
     conn = get_db()
     c = conn.cursor()
     c.execute("UPDATE transactions SET title=?,amount=?,category=?,date=?,note=? WHERE id=?",
@@ -133,7 +233,21 @@ def get_budgets():
 @app.route('/api/budgets', methods=['POST'])
 def set_budget():
     d = request.get_json()
-    month  = str(d['month']).zfill(2)
+    if not d:
+        return jsonify({'error': 'No data provided'}), 400
+    try:
+        amount = float(d.get('amount', 0))
+        if amount <= 0 or amount > 99999999:
+            return jsonify({'error': 'Invalid budget amount'}), 400
+        month = int(d['month'])
+        if month < 1 or month > 12:
+            return jsonify({'error': 'Month must be between 1 and 12'}), 400
+        year = int(d['year'])
+        if year < 2000 or year > 2100:
+            return jsonify({'error': 'Invalid year'}), 400
+    except (TypeError, ValueError, KeyError):
+        return jsonify({'error': 'Invalid budget data'}), 400
+    month  = str(month).zfill(2)
     year   = int(d['year'])
     amount = float(d['amount'])
     conn = get_db()

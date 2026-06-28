@@ -1,6 +1,10 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
+const crypto = require('crypto');
+
+// Random token generated fresh every time the app starts
+const API_TOKEN = crypto.randomBytes(32).toString('hex');
 
 // Required for Windows installer (Squirrel) to work
 try { if (require('electron-squirrel-startup')) app.quit(); } catch (_) {}
@@ -29,7 +33,10 @@ function startPythonBackend() {
 
   console.log('[Main] Starting backend:', command);
 
-  pythonProcess = spawn(command, args, options);
+  pythonProcess = spawn(command, args, {
+    ...options,
+    env: { ...process.env, EXPENSE_API_TOKEN: API_TOKEN }
+});
 
   // Log output for debugging (visible in dev terminal)
   pythonProcess.stdout?.on('data', d => console.log('[Flask]',     d.toString().trim()));
@@ -66,6 +73,8 @@ function createWindow() {
 
 app.whenReady().then(() => {
   startPythonBackend();
+  // Let renderer ask for the token securely via IPC
+  ipcMain.handle('get-api-token', () => API_TOKEN);
   createWindow();
 });
 

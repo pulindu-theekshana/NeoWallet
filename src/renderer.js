@@ -4,15 +4,28 @@
 ═══════════════════════════════════════════════════════════ */
 
 const API = 'http://127.0.0.1:5000/api';
+let API_TOKEN = '';   // filled in at boot
+
+// Escapes user-entered text before inserting into innerHTML
+// Prevents HTML/script injection if someone types <script> in a title field
+function esc(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 // ── App State ───────────────────────────────────────────────
 const S = {
-  page:    'dashboard',
-  month:   new Date().getMonth() + 1,
-  year:    new Date().getFullYear(),
+  page:      'dashboard',
+  month:     new Date().getMonth() + 1,
+  year:      new Date().getFullYear(),
   catFilter: '',
-  editId:  null,
-  charts:  {},
+  search:    '',        // ← add this
+  editId:    null,
+  charts:    {},
 };
 
 // ── Category meta ───────────────────────────────────────────
@@ -91,12 +104,49 @@ function toast(msg, type = 'success') {
   t.className = `toast ${type}`;
   t.textContent = msg;
   document.body.appendChild(t);
-  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 350); }, 3200);
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 350); }, 5500);
+}
+
+// Custom confirm dialog — replaces browser confirm()
+// Usage: const yes = await customConfirm('Delete this?', 'This cannot be undone.');
+function customConfirm(title, message, okLabel = 'Delete') {
+  return new Promise(resolve => {
+    document.getElementById('confirm-title').textContent   = title;
+    document.getElementById('confirm-message').textContent = message;
+    document.getElementById('confirm-ok').textContent      = okLabel;
+    document.getElementById('confirm-overlay').classList.remove('hidden');
+
+    const ok     = document.getElementById('confirm-ok');
+    const cancel = document.getElementById('confirm-cancel');
+    const overlay = document.getElementById('confirm-overlay');
+
+    function cleanup(result) {
+      overlay.classList.add('hidden');
+      ok.removeEventListener('click', onOk);
+      cancel.removeEventListener('click', onCancel);
+      overlay.removeEventListener('click', onOverlay);
+      resolve(result);
+    }
+
+    const onOk      = () => cleanup(true);
+    const onCancel  = () => cleanup(false);
+    const onOverlay = e => { if (e.target === overlay) cleanup(false); };
+
+    ok.addEventListener('click',     onOk);
+    cancel.addEventListener('click', onCancel);
+    overlay.addEventListener('click', onOverlay);
+  });
 }
 
 // ── API helpers ──────────────────────────────────────────────
 async function api(method, path, body) {
-  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  const opts = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-API-Token': API_TOKEN
+    }
+  };
   if (body) opts.body = JSON.stringify(body);
   const r = await fetch(API + path, opts);
   if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -149,9 +199,9 @@ async function renderDashboard() {
     el.innerHTML = `
       <div class="page-header">
         <div class="month-nav">
-          <button id="d-prev">◀</button>
+          <button id="d-prev">&#9664;</button>
           <h2>${MONTHS[S.month - 1]} ${S.year}</h2>
-          <button id="d-next">▶</button>
+          <button id="d-next">&#9654;</button>
         </div>
         <button class="btn-primary" id="d-add">+ Add expense</button>
       </div>
@@ -200,8 +250,8 @@ function buildRecentList(items) {
     <div class="trans-item">
       <div class="trans-icon ${catBgClass(t.category)}">${catIcon(t.category)}</div>
       <div class="trans-info">
-        <div class="trans-name">${t.title}</div>
-        <div class="trans-meta">${t.category} · ${fmtDate(t.date)}</div>
+        <div class="trans-name">${esc(t.title)}</div>
+        <div class="trans-meta">${esc(t.category)} · ${fmtDate(t.date)}</div>
       </div>
       <div class="trans-amount">-${fmtNum(t.amount)}</div>
     </div>`).join('') + '</div>';
@@ -240,7 +290,13 @@ async function renderTransactions() {
 
     const catOptions = ['Groceries','Utilities','Transport','Dining','Shopping','Healthcare','Entertainment','Education','Sports','Other']
       .map(c => `<option value="${c}" ${S.catFilter===c?'selected':''}>${c}</option>`).join('');
-
+    // Apply search filter client-side
+    const displayRows = rows.filter(t => {
+      if (!S.search) return true;
+      const q = S.search.toLowerCase();
+      return t.title.toLowerCase().includes(q) ||
+             (t.note  || '').toLowerCase().includes(q);
+    });
     el.innerHTML = `
       <div class="page-header">
         <h1 class="page-title">Transactions</h1>
@@ -249,18 +305,29 @@ async function renderTransactions() {
 
       <div class="filters">
         <div class="month-nav" style="gap:8px">
-          <button class="filter-select" id="t-prev">◀</button>
+          <button class="filter-select" id="t-prev">&#9664;</button>
           <span style="font-weight:600;font-size:15px">${MONTHS[S.month-1]} ${S.year}</span>
-          <button class="filter-select" id="t-next">▶</button>
+          <button class="filter-select" id="t-next">&#9654;</button>
         </div>
         <select class="filter-select" id="t-cat-filter">
           <option value="" ${!S.catFilter?'selected':''}>All Categories</option>
           ${catOptions}
         </select>
+        <input
+          class="filter-select"
+          id="t-search"
+          type="text"
+          placeholder="Search title or note..."
+          value="${esc(S.search)}"
+          style="min-width:200px; background:var(--bg-surface);">
+        <button class="filter-select" id="t-clear-filters"
+          style="color:var(--text-muted);${(!S.catFilter && !S.search) ? 'opacity:0.4;cursor:default' : ''}">
+          ✕ Clear
+        </button>
       </div>
 
       <div class="card table-wrap">
-        ${rows.length === 0
+        ${displayRows.length === 0
           ? `<div class="empty"><div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></div><p>No transactions found</p></div>`
           : `<table class="data-table">
@@ -268,16 +335,16 @@ async function renderTransactions() {
                 <th>Title</th><th>Category</th><th>Date</th><th>Amount</th><th>Note</th><th>Actions</th>
               </tr></thead>
               <tbody>
-                ${rows.map(t => `
+                ${displayRows.map(t => `
                   <tr>
                     <td><div style="display:flex;align-items:center;gap:10px">
                       <div class="icon-sm ${catBgClass(t.category)}">${catIcon(t.category)}</div>
-                      ${t.title}
+                      ${esc(t.title)}
                     </div></td>
-                    <td style="color:${catColor(t.category)}">${t.category}</td>
+                    <td style="color:${catColor(t.category)}">${esc(t.category)}</td>
                     <td>${fmtDate(t.date)}</td>
                     <td style="color:var(--red);font-weight:600">-${fmtCurrency(t.amount)}</td>
-                    <td style="color:var(--text-muted)">${t.note || '—'}</td>
+                    <td style="color:var(--text-muted)">${esc(t.note) || '-'}</td>
                     <td>
                       <button class="act-btn edi" data-id="${t.id}" title="Edit">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -296,12 +363,35 @@ async function renderTransactions() {
     document.getElementById('t-next').onclick = () => { nextMonth(() => { S.catFilter=''; renderTransactions(); }); };
     document.getElementById('t-cat-filter').onchange = function() { S.catFilter = this.value; renderTransactions(); };
 
+    document.getElementById('t-search').addEventListener('input', async function() {
+      S.search = this.value;
+      const savedValue = this.value;  // capture before re-render destroys the input
+      await renderTransactions();     // wait for full re-render to finish
+      const input = document.getElementById('t-search');
+      if (input) {
+        input.value = savedValue;     // restore the typed value
+        input.focus();
+        input.setSelectionRange(savedValue.length, savedValue.length);
+      }
+    });
+
+    document.getElementById('t-clear-filters').onclick = () => {
+      S.catFilter = '';
+      S.search    = '';
+      renderTransactions();
+    };
+
     el.querySelectorAll('.act-btn.edi').forEach(b => b.onclick = async () => {
-      const t = rows.find(x => x.id == b.dataset.id);
+      const t = displayRows.find(x => x.id == b.dataset.id);
       if (t) openModal(t);
     });
     el.querySelectorAll('.act-btn.del').forEach(b => b.onclick = async () => {
-      if (!confirm('Delete this transaction?')) return;
+      const t = displayRows.find(x => x.id == b.dataset.id);
+      const yes = await customConfirm(
+        'Delete transaction?',
+        `"${t ? t.title : 'This transaction'}" will be permanently deleted.`
+      );
+      if (!yes) return;
       await DELETE('/transactions/' + b.dataset.id);
       toast('Transaction deleted');
       renderTransactions();
@@ -321,14 +411,38 @@ async function renderReports() {
   const el = document.getElementById('page-reports');
   const yearOpts = [0,1,2].map(i => { const y = new Date().getFullYear()-i; return `<option value="${y}" ${y===S.year?'selected':''}>${y}</option>`; }).join('');
 
-  el.innerHTML = `
+el.innerHTML = `
     <div class="page-header">
       <h1 class="page-title">Reports</h1>
       <select class="filter-select" id="r-year">${yearOpts}</select>
     </div>
     <div class="reports-grid">
-      <div class="card"><div class="card-title">Monthly Spending (${S.year})</div><div class="chart-box"><canvas id="monthly-chart"></canvas></div></div>
-      <div class="card"><div class="card-title">By Category</div><div class="chart-box"><canvas id="donut-chart"></canvas></div></div>
+      <div class="card chart-card" id="monthly-card">
+        <div class="card-header-row">
+          <div class="card-title">Monthly Spending (${S.year})</div>
+          <span class="expand-hint">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M15 3h6v6"/><path d="M9 21H3v-6"/>
+              <path d="M21 3l-7 7"/><path d="M3 21l7-7"/>
+            </svg>
+            expand
+          </span>
+        </div>
+        <div class="chart-box"><canvas id="monthly-chart"></canvas></div>
+      </div>
+      <div class="card chart-card" id="donut-card">
+        <div class="card-header-row">
+          <div class="card-title">By Category</div>
+          <span class="expand-hint">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M15 3h6v6"/><path d="M9 21H3v-6"/>
+              <path d="M21 3l-7 7"/><path d="M3 21l7-7"/>
+            </svg>
+            expand
+          </span>
+        </div>
+        <div class="chart-box"><canvas id="donut-chart"></canvas></div>
+      </div>
     </div>`;
 
   document.getElementById('r-year').onchange = function() { S.year = +this.value; renderReports(); };
@@ -370,7 +484,145 @@ async function renderReports() {
         plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', padding: 14, boxWidth: 12 } } }
       }
     });
+  // Make cards open expanded modal when clicked
+    document.getElementById('monthly-card').onclick = () => openChartModal('monthly', d);
+    document.getElementById('donut-card').onclick   = () => openChartModal('donut',   d);
+
   } catch (e) { /* charts silently fail on no data — canvas stays blank */ }
+}
+
+// ════════════════════════════════════════════════════════════
+//  CHART EXPAND MODAL
+// ════════════════════════════════════════════════════════════
+let expandedChart = null;
+
+function openChartModal(type, data) {
+  // Clean up any existing expanded modal
+  closeChartModal();
+
+  const title = type === 'monthly'
+    ? `Monthly Spending (${S.year})`
+    : 'Spending by Category';
+
+  // Build modal HTML
+  const backdrop = document.createElement('div');
+  backdrop.className = 'chart-modal-backdrop';
+  backdrop.id        = 'chart-modal-backdrop';
+
+  backdrop.innerHTML = `
+    <div class="chart-modal">
+      <div class="chart-modal-header">
+        <h3>${title}</h3>
+        <button class="chart-modal-close" id="chart-modal-close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+               stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6"  y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="chart-modal-body">
+        <div class="chart-modal-canvas">
+          <canvas id="expanded-chart"></canvas>
+        </div>
+      </div>
+    </div>`;
+
+  document.body.appendChild(backdrop);
+
+  // Close on clicking blurred backdrop outside the modal box
+  backdrop.addEventListener('click', e => {
+    if (e.target === backdrop) closeChartModal();
+  });
+
+  // Close on X button
+  document.getElementById('chart-modal-close').onclick = closeChartModal;
+
+  // Close on Escape key
+  document.addEventListener('keydown', handleChartEscape);
+
+  // Draw the bigger chart
+  const canvas = document.getElementById('expanded-chart');
+
+  if (type === 'monthly') {
+    expandedChart = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: data.monthly_spending.map(r => MONTHS[+r.month - 1]),
+        datasets: [{
+          label: 'LKR',
+          data: data.monthly_spending.map(r => r.total),
+          backgroundColor: '#6366f1',
+          borderRadius: 8,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: {
+            grid:  { color: 'rgba(255,255,255,0.05)' },
+            ticks: { color: '#94a3b8', font: { size: 13 } }
+          },
+          y: {
+            grid:  { color: 'rgba(255,255,255,0.05)' },
+            ticks: {
+              color: '#94a3b8',
+              font: { size: 13 },
+              callback: v => 'LKR ' + fmtNum(v)
+            }
+          }
+        }
+      }
+    });
+
+  } else {
+    const cats = data.category_breakdown;
+    expandedChart = new Chart(canvas, {
+      type: 'doughnut',
+      data: {
+        labels: cats.map(c => c.category),
+        datasets: [{
+          data:            cats.map(c => c.total),
+          backgroundColor: cats.map(c => catColor(c.category)),
+          borderWidth: 3,
+          borderColor: '#1e293b',
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'right',
+            labels: {
+              color:    '#94a3b8',
+              padding:  18,
+              boxWidth: 14,
+              font: { size: 13 }
+            }
+          },
+          tooltip: {
+            callbacks: {
+              label: ctx => ` ${ctx.label}: LKR ${fmtNum(ctx.parsed)}`
+            }
+          }
+        }
+      }
+    });
+  }
+}
+
+function handleChartEscape(e) {
+  if (e.key === 'Escape') closeChartModal();
+}
+
+function closeChartModal() {
+  if (expandedChart) { expandedChart.destroy(); expandedChart = null; }
+  const backdrop = document.getElementById('chart-modal-backdrop');
+  if (backdrop) backdrop.remove();
+  document.removeEventListener('keydown', handleChartEscape);
 }
 
 // ════════════════════════════════════════════════════════════
@@ -458,6 +710,11 @@ function renderSettings() {
           <button class="btn-primary" id="s-export">Export CSV</button>
         </div>
         <div class="settings-row">
+          <span class="settings-key">Import transactions from CSV</span>
+          <button class="btn-primary" id="s-import" style="background:var(--bg-elevated);border:1px solid var(--border)">Import CSV</button>
+        </div>
+        <input type="file" id="s-import-file" accept=".csv" style="display:none">
+        <div class="settings-row">
           <span class="settings-key" style="color:var(--red)">Clear all data</span>
           <button class="btn-danger" id="s-clear">Clear Data</button>
         </div>
@@ -472,8 +729,29 @@ function renderSettings() {
   document.getElementById('s-export').onclick = async () => {
     try {
       const rows = await GET('/transactions');
-      const csv = ['Date,Title,Category,Amount,Note',
-        ...rows.map(t => `${t.date},"${t.title}",${t.category},${t.amount},"${t.note||''}"`)].join('\n');
+
+      // Properly escape a CSV field — wraps in quotes and escapes inner quotes
+      const csvField = v => {
+        // Replace newlines with a space so the import parser never sees multiline fields
+        const s = String(v ?? '').replace(/[\r\n]+/g, ' ');
+        // If field contains comma or quote — wrap in quotes and escape inner quotes
+        if (s.includes(',') || s.includes('"')) {
+          return '"' + s.replace(/"/g, '""') + '"';
+        }
+        return s;
+      };
+
+      const csv = [
+        'Date,Title,Category,Amount,Note',
+        ...rows.map(t => [
+          csvField(t.date),
+          csvField(t.title),
+          csvField(t.category),
+          csvField(t.amount),
+          csvField(t.note || '')
+        ].join(','))
+      ].join('\n');
+
       const a = document.createElement('a');
       a.href = 'data:text/csv,' + encodeURIComponent(csv);
       a.download = `expenses_${new Date().toISOString().slice(0,10)}.csv`;
@@ -481,9 +759,80 @@ function renderSettings() {
       toast('Exported!');
     } catch { toast('Export failed', 'error'); }
   };
+  document.getElementById('s-import').onclick = () => {
+    document.getElementById('s-import-file').click();
+  };
+
+  document.getElementById('s-import-file').onchange = async function () {
+    const file = this.files[0];
+    if (!file) return;
+
+    const text = await file.text();
+    const lines = text.trim().split('\n');
+    if (lines.length < 2) { toast('CSV file is empty', 'error'); return; }
+
+    // Expected header: Date,Title,Category,Amount,Note
+    // Proper CSV parser — handles quoted fields, escaped quotes, commas inside fields
+    function parseCSVLine(line) {
+      const fields = [];
+      let cur = '';
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (inQuotes) {
+          if (ch === '"' && line[i + 1] === '"') {
+            cur += '"'; i++; // escaped quote "" → "
+          } else if (ch === '"') {
+            inQuotes = false;
+          } else {
+            cur += ch;
+          }
+        } else {
+          if (ch === '"') {
+            inQuotes = true;
+          } else if (ch === ',') {
+            fields.push(cur.trim()); cur = '';
+          } else {
+            cur += ch;
+          }
+        }
+      }
+      fields.push(cur.trim());
+      return fields;
+    }
+
+    const rows = [];
+    for (let i = 1; i < lines.length; i++) {
+      if (!lines[i].trim()) continue; // skip empty lines
+      const clean = parseCSVLine(lines[i]);
+      if (clean.length < 4) continue;
+      rows.push({
+        date:     clean[0],
+        title:    clean[1],
+        category: clean[2],
+        amount:   parseFloat(clean[3]),
+        note:     clean[4] || ''
+      });
+    }
+
+    if (rows.length === 0) { toast('No valid rows found in CSV', 'error'); return; }
+
+    try {
+      const result = await POST('/transactions/import', rows);
+      toast(`Imported ${result.inserted} transactions${result.skipped > 0 ? `, skipped ${result.skipped} invalid rows` : ''}!`);
+      this.value = ''; // reset file input
+    } catch {
+      toast('Import failed', 'error');
+    }
+  };
 
 document.getElementById('s-clear').onclick = async () => {
-    if (confirm('Delete ALL transactions and budgets? This cannot be undone.')) {
+    const yes = await customConfirm(
+      'Clear all data?',
+      'Every transaction and budget will be permanently deleted. Export a CSV backup first if needed.',
+      'Clear Everything'
+    );
+    if (yes) {
         try {
             await DELETE('/clear');
             toast('All data cleared!');
@@ -581,6 +930,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
   // Show loading screen and wait for Flask
+  // Get the security token from the main process before any API calls
+  API_TOKEN = await window.electronAPI.getApiToken();
+
   const loader = document.getElementById('loading-screen');
   const ready  = await waitForBackend();
   loader.classList.add('hidden');

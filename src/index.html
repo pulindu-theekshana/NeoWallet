@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- CSP: allows fetch to Flask on localhost, and Chart.js from CDN -->
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self' 'unsafe-inline' 'unsafe-eval';
+    content="default-src 'self' 'unsafe-inline';
              connect-src http://127.0.0.1:5000;
-             script-src  'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net;
+             script-src  'self' 'unsafe-inline';
              img-src     'self' data: blob:;">
   <title>NeoWallet</title>
   <link rel="stylesheet" href="index.css">
   <!-- Chart.js for the Reports page -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="chart.min.js"></script>
 </head>
 <body>
 
@@ -20,7 +20,7 @@
   <aside class="sidebar">
     <div class="logo">
       <span class="logo-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-menu-icon lucide-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M4 5h16"/>
           <path d="M4 12h16"/>
           <path d="M4 19h16"/>
@@ -62,9 +62,10 @@
       </a>
       <a class="nav-item" data-page="budgets">
         <span class="nav-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-badge-dollar-sign-icon lucide-badge-dollar-sign">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/>
-            <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/>
+            <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/>
+            <path d="M12 18V6"/>
           </svg>
         </span>
         Budgets
@@ -87,7 +88,7 @@
     <!-- Full-screen loader shown while Flask starts up -->
     <div id="loading-screen" class="loading-screen">
       <div class="spinner"></div>
-      <p>Starting backend…</p>
+      <p>Starting backend...</p>
     </div>
 
     <div id="page-dashboard"    class="page hidden"></div>
@@ -103,7 +104,7 @@
     <div class="modal">
       <div class="modal-header">
         <h3 id="modal-title">Add Expense</h3>
-        <button id="modal-close" class="modal-close">✕</button>
+        <button id="modal-close" class="modal-close">&times;</button>
       </div>
       <div class="modal-body">
         <input type="hidden" id="trans-id">
@@ -136,7 +137,7 @@
         </div>
         <div class="form-group">
           <label>Note (optional)</label>
-          <input type="text" id="trans-note" placeholder="Add a note…">
+          <input type="text" id="trans-note" placeholder="Add a note...">
         </div>
       </div>
       <div class="modal-footer">
@@ -147,5 +148,22 @@
   </div>
 
   <script src="renderer.js"></script>
+
+  <!-- ═══ CONFIRM MODAL ═══ -->
+  <div id="confirm-overlay" class="modal-overlay hidden">
+    <div class="modal" style="width:380px">
+      <div class="modal-header">
+        <h3 id="confirm-title">Are you sure?</h3>
+      </div>
+      <div class="modal-body" style="padding:20px 22px 8px">
+        <p id="confirm-message" style="color:var(--text-muted);font-size:14px;line-height:1.6"></p>
+      </div>
+      <div class="modal-footer">
+        <button id="confirm-cancel" class="btn-secondary">Cancel</button>
+        <button id="confirm-ok"     class="btn-danger"    style="padding:10px 18px">Delete</button>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>
