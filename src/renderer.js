@@ -322,7 +322,7 @@ async function renderTransactions() {
           style="min-width:200px; background:var(--bg-surface);">
         <button class="filter-select" id="t-clear-filters"
           style="color:var(--text-muted);${(!S.catFilter && !S.search) ? 'opacity:0.4;cursor:default' : ''}">
-          ✕ Clear
+          &#x2715; Clear
         </button>
       </div>
 
