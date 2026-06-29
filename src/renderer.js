@@ -20,10 +20,12 @@ function esc(str) {
 // Debounce — delays calling fn until ms milliseconds after last call
 function debounce(fn, ms) {
   let timer;
-  return function(...args) {
+  const debounced = function(...args) {
     clearTimeout(timer);
     timer = setTimeout(() => fn.apply(this, args), ms);
   };
+  debounced.cancel = () => clearTimeout(timer); // allows cancelling a pending call
+  return debounced;
 }
 
 // ── App State ───────────────────────────────────────────────
@@ -388,6 +390,7 @@ async function renderTransactions() {
     });
 
     document.getElementById('t-clear-filters').onclick = () => {
+      debouncedSearch.cancel(); // cancel any pending search before clearing
       S.catFilter = '';
       S.search    = '';
       renderTransactions();
@@ -818,11 +821,13 @@ function renderSettings() {
       if (!lines[i].trim()) continue; // skip empty lines
       const clean = parseCSVLine(lines[i]);
       if (clean.length < 4) continue;
+      const amount = Number(clean[3]);
+      if (!Number.isFinite(amount) || amount <= 0) continue; // skip rows with invalid amounts
       rows.push({
         date:     clean[0],
         title:    clean[1],
         category: clean[2],
-        amount:   parseFloat(clean[3]),
+        amount:   amount,
         note:     clean[4] || ''
       });
     }

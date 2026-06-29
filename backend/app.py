@@ -3,6 +3,7 @@ from flask_cors import CORS
 from database import get_db, init_db
 from datetime import datetime
 import os
+import math
 import secrets as _secrets
 
 app = Flask(__name__)
@@ -37,40 +38,60 @@ VALID_CATEGORIES = {
 }
 
 def validate_transaction(d):
-    """Returns list of error strings. Empty list means valid."""
+    """Returns (errors, cleaned) where errors is a list of strings
+       and cleaned is a normalized dict ready to store in the database."""
     if not isinstance(d, dict):
-        return ['Invalid transaction data']
+        return ['Invalid transaction data'], {}
 
     errors = []
+    cleaned = {}
 
+    # Title
     title = str(d.get('title', '')).strip()
     if not title:
         errors.append('Title is required')
     elif len(title) > 100:
         errors.append('Title must be 100 characters or less')
+    else:
+        cleaned['title'] = title
 
+    # Amount
     try:
         amount = float(d.get('amount', 0))
-        if amount <= 0:
+        if not math.isfinite(amount):
+            errors.append('Amount must be a finite number')
+        elif amount <= 0:
             errors.append('Amount must be greater than zero')
-        if amount > 99999999:
+        elif amount > 99999999:
             errors.append('Amount is too large')
+        else:
+            cleaned['amount'] = amount
     except (TypeError, ValueError):
         errors.append('Amount must be a valid number')
 
-    if d.get('category') not in VALID_CATEGORIES:
-        errors.append(f'Invalid category')
+    # Category
+    category = d.get('category', '')
+    if category not in VALID_CATEGORIES:
+        errors.append('Invalid category')
+    else:
+        cleaned['category'] = category
 
+    # Date
+    date_str = str(d.get('date', ''))
     try:
-        datetime.strptime(str(d.get('date', '')), '%Y-%m-%d')
+        datetime.strptime(date_str, '%Y-%m-%d')
+        cleaned['date'] = date_str
     except ValueError:
         errors.append('Date must be in YYYY-MM-DD format')
 
-    note = str(d.get('note', ''))
+    # Note
+    note = str(d.get('note', '')).strip()
     if len(note) > 200:
         errors.append('Note must be 200 characters or less')
+    else:
+        cleaned['note'] = note
 
-    return errors
+    return errors, cleaned
 
 @app.route('/api/health')
 def health():
@@ -159,14 +180,13 @@ def import_transactions():
     c = conn.cursor()
 
     for d in rows:
-        errors = validate_transaction(d)
+        errors, cleaned = validate_transaction(d)
         if errors:
             skipped += 1
             continue
         c.execute(
             "INSERT INTO transactions (title, amount, category, date, note) VALUES (?,?,?,?,?)",
-            (str(d['title']).strip(), float(d['amount']),
-             d['category'], d['date'], str(d.get('note', '')).strip())
+            (cleaned['title'], cleaned['amount'], cleaned['category'], cleaned['date'], cleaned['note'])
         )
         inserted += 1
 
@@ -180,13 +200,13 @@ def add_transaction():
     d = request.get_json()
     if not d:
         return jsonify({'error': 'No data provided'}), 400
-    errors = validate_transaction(d)
+    errors, cleaned = validate_transaction(d)
     if errors:
         return jsonify({'error': errors[0]}), 400
     conn = get_db()
     c = conn.cursor()
     c.execute("INSERT INTO transactions (title,amount,category,date,note) VALUES (?,?,?,?,?)",
-              (d['title'], d['amount'], d['category'], d['date'], d.get('note', '')))
+              (cleaned['title'], cleaned['amount'], cleaned['category'], cleaned['date'], cleaned['note']))
     conn.commit()
     tid = c.lastrowid
     conn.close()
@@ -198,13 +218,13 @@ def update_transaction(tid):
     d = request.get_json()
     if not d:
         return jsonify({'error': 'No data provided'}), 400
-    errors = validate_transaction(d)
+    errors, cleaned = validate_transaction(d)
     if errors:
         return jsonify({'error': errors[0]}), 400
     conn = get_db()
     c = conn.cursor()
     c.execute("UPDATE transactions SET title=?,amount=?,category=?,date=?,note=? WHERE id=?",
-              (d['title'], d['amount'], d['category'], d['date'], d.get('note', ''), tid))
+              (cleaned['title'], cleaned['amount'], cleaned['category'], cleaned['date'], cleaned['note'], tid))
     conn.commit()
     conn.close()
     return jsonify({'message': 'Updated'})
@@ -237,7 +257,7 @@ def set_budget():
         return jsonify({'error': 'No data provided'}), 400
     try:
         amount = float(d.get('amount', 0))
-        if amount <= 0 or amount > 99999999:
+        if not math.isfinite(amount) or amount <= 0 or amount > 99999999:
             return jsonify({'error': 'Invalid budget amount'}), 400
         month = int(d['month'])
         if month < 1 or month > 12:
@@ -248,8 +268,7 @@ def set_budget():
     except (TypeError, ValueError, KeyError):
         return jsonify({'error': 'Invalid budget data'}), 400
     month  = str(month).zfill(2)
-    year   = int(d['year'])
-    amount = float(d['amount'])
+    # year and amount already parsed and validated above — use them directly
     conn = get_db()
     c = conn.cursor()
     # Check if exists first (compatible with older SQLite)
