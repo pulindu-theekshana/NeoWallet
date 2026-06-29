@@ -17,6 +17,15 @@ function esc(str) {
     .replace(/'/g, '&#39;');
 }
 
+// Debounce — delays calling fn until ms milliseconds after last call
+function debounce(fn, ms) {
+  let timer;
+  return function(...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), ms);
+  };
+}
+
 // ── App State ───────────────────────────────────────────────
 const S = {
   page:      'dashboard',
@@ -265,7 +274,7 @@ function buildCatBars(cats, total, budgetPct) {
     const col = catColor(c.category);
     return `<div class="cat-item">
       <div class="cat-row">
-        <div class="cat-name"><div class="cat-dot" style="background:${col}"></div>${c.category}</div>
+        <div class="cat-name"><div class="cat-dot" style="background:${col}"></div>${esc(c.category)}</div>
         <div class="cat-total">${fmtNum(c.total)}</div>
       </div>
       <div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${col}"></div></div>
@@ -363,16 +372,19 @@ async function renderTransactions() {
     document.getElementById('t-next').onclick = () => { nextMonth(() => { S.catFilter=''; renderTransactions(); }); };
     document.getElementById('t-cat-filter').onchange = function() { S.catFilter = this.value; renderTransactions(); };
 
-    document.getElementById('t-search').addEventListener('input', async function() {
-      S.search = this.value;
-      const savedValue = this.value;  // capture before re-render destroys the input
-      await renderTransactions();     // wait for full re-render to finish
+    const debouncedSearch = debounce(async function(value) {
+      S.search = value;
+      await renderTransactions();
       const input = document.getElementById('t-search');
       if (input) {
-        input.value = savedValue;     // restore the typed value
+        input.value = value;
         input.focus();
-        input.setSelectionRange(savedValue.length, savedValue.length);
+        input.setSelectionRange(value.length, value.length);
       }
+    }, 300);
+
+    document.getElementById('t-search').addEventListener('input', function() {
+      debouncedSearch(this.value);
     });
 
     document.getElementById('t-clear-filters').onclick = () => {
@@ -721,8 +733,8 @@ function renderSettings() {
       </div>
       <div class="settings-section">
         <h3>About</h3>
-        <div class="settings-row"><span class="settings-key">App</span><span class="settings-val">NeoWallet — Desktop Edition</span></div>
-        <div class="settings-row"><span class="settings-key">Built with</span><span class="settings-val">Electron · Flask · SQLite</span></div>
+        <div class="settings-row"><span class="settings-key">App</span><span class="settings-val">NeoWallet - Desktop Edition</span></div>
+        <div class="settings-row"><span class="settings-key">Built with</span><span class="settings-val">Electron / Flask / SQLite</span></div>
       </div>
     </div>`;
 
