@@ -87,8 +87,13 @@
 
     <!-- Full-screen loader shown while Flask starts up -->
     <div id="loading-screen" class="loading-screen">
-      <div class="spinner"></div>
-      <p>Starting backend...</p>
+      <div class="loading-logo">
+        <span class="loading-neo">Neo</span>
+        <span class="loading-wallet">wallet</span>
+      </div>
+      <div class="loading-bar-wrap">
+        <div class="loading-bar-fill" id="loading-bar"></div>
+      </div>
     </div>
 
     <div id="page-dashboard"    class="page hidden"></div>
@@ -114,26 +119,53 @@
         </div>
         <div class="form-group">
           <label>Amount (LKR)</label>
-          <input type="number" id="trans-amount" placeholder="0" min="0" step="1">
+          <div class="num-wrap">
+            <input type="number" id="trans-amount" placeholder="0" min="0">
+            <div class="num-btns">
+              <button class="num-btn" onclick="adjNum('trans-amount', 100)" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+              </button>
+              <button class="num-btn" onclick="adjNum('trans-amount', -100)" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </div>
+          </div>
         </div>
         <div class="form-group">
           <label>Category</label>
-          <select id="trans-category">
-            <option>Groceries</option>
-            <option>Utilities</option>
-            <option>Transport</option>
-            <option>Dining</option>
-            <option>Shopping</option>
-            <option>Healthcare</option>
-            <option>Entertainment</option>
-            <option>Education</option>
-            <option>Sports</option>
-            <option>Other</option>
-          </select>
+          <div class="cdd" id="cdd-trans-category" data-value="Groceries">
+            <div class="cdd-trigger">
+              <span class="cdd-label">Groceries</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <div class="cdd-menu">
+              <div class="cdd-item sel" data-value="Groceries">Groceries</div>
+              <div class="cdd-item" data-value="Utilities">Utilities</div>
+              <div class="cdd-item" data-value="Transport">Transport</div>
+              <div class="cdd-item" data-value="Dining">Dining</div>
+              <div class="cdd-item" data-value="Shopping">Shopping</div>
+              <div class="cdd-item" data-value="Healthcare">Healthcare</div>
+              <div class="cdd-item" data-value="Entertainment">Entertainment</div>
+              <div class="cdd-item" data-value="Education">Education</div>
+              <div class="cdd-item" data-value="Sports">Sports</div>
+              <div class="cdd-item" data-value="Other">Other</div>
+            </div>
+          </div>
         </div>
         <div class="form-group">
           <label>Date</label>
-          <input type="date" id="trans-date">
+          <div class="datepicker" id="dp-trans-date">
+            <div class="dp-trigger" id="dp-trigger-trans-date">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8"  y1="2" x2="8"  y2="6"/>
+                <line x1="3"  y1="10" x2="21" y2="10"/>
+              </svg>
+              <span id="dp-display-trans-date">Select date</span>
+            </div>
+          </div>
+          <input type="hidden" id="trans-date" value="">
         </div>
         <div class="form-group">
           <label>Note (optional)</label>

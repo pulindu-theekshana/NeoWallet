@@ -320,6 +320,80 @@ def clear_all_data():
     conn.close()
     return jsonify({'message': 'All data cleared'})
 
+@app.route('/api/backup', methods=['GET'])
+def get_backup():
+    """Export everything — transactions and budgets — as JSON."""
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT title, amount, category, date, note FROM transactions ORDER BY date DESC")
+    transactions = [dict(r) for r in c.fetchall()]
+    c.execute("SELECT month, year, amount FROM budgets ORDER BY year DESC, month DESC")
+    budgets = [dict(r) for r in c.fetchall()]
+    conn.close()
+    return jsonify({'version': 1, 'transactions': transactions, 'budgets': budgets})
+
+
+@app.route('/api/restore', methods=['POST'])
+def restore_backup():
+    """Restore from a full JSON backup — clears existing data first."""
+    data = request.get_json()
+    if not isinstance(data, dict) or 'version' not in data:
+        return jsonify({'error': 'Invalid backup file'}), 400
+
+    transactions = data.get('transactions', [])
+    budgets      = data.get('budgets', [])
+
+    conn = get_db()
+    c = conn.cursor()
+
+    # Clear everything first
+    c.execute("DELETE FROM transactions")
+    c.execute("DELETE FROM budgets")
+    try:
+        c.execute("DELETE FROM sqlite_sequence WHERE name IN ('transactions','budgets')")
+    except Exception:
+        pass
+
+    # Restore transactions
+    t_ok = 0
+    t_skip = 0
+    for t in transactions:
+        errors, cleaned = validate_transaction(t)
+        if errors:
+            t_skip += 1
+            continue
+        c.execute(
+            "INSERT INTO transactions (title,amount,category,date,note) VALUES (?,?,?,?,?)",
+            (cleaned['title'], cleaned['amount'], cleaned['category'], cleaned['date'], cleaned['note'])
+        )
+        t_ok += 1
+
+    # Restore budgets
+    b_ok = 0
+    b_skip = 0
+    for b in budgets:
+        try:
+            month  = str(b['month']).zfill(2)
+            year   = int(b['year'])
+            amount = float(b['amount'])
+            if not math.isfinite(amount) or amount <= 0:
+                b_skip += 1
+                continue
+            c.execute("INSERT OR REPLACE INTO budgets (month,year,amount) VALUES (?,?,?)",
+                      (month, year, amount))
+            b_ok += 1
+        except Exception:
+            b_skip += 1
+
+    conn.commit()
+    conn.close()
+    return jsonify({
+        'transactions_restored': t_ok,
+        'transactions_skipped':  t_skip,
+        'budgets_restored':      b_ok,
+        'budgets_skipped':       b_skip,
+    })
+
 if __name__ == '__main__':
     print('[Flask] Starting on http://127.0.0.1:5000')
     app.run(host='127.0.0.1', port=5000, debug=False, use_reloader=False)

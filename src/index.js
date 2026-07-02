@@ -1,7 +1,8 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const crypto = require('crypto');
+const fs = require('fs');
 
 // Random token generated fresh every time the app starts
 const API_TOKEN = crypto.randomBytes(32).toString('hex');
@@ -75,6 +76,27 @@ app.whenReady().then(() => {
   startPythonBackend();
   // Let renderer ask for the token securely via IPC
   ipcMain.handle('get-api-token', () => API_TOKEN);
+  ipcMain.handle('save-csv', async (event, { filename, content }) => {
+    const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+      title:       'Save CSV Export',
+      defaultPath: filename,
+      filters:     [{ name: 'CSV Files', extensions: ['csv'] }],
+    });
+    if (canceled || !filePath) return { saved: false };
+    fs.writeFileSync(filePath, content, 'utf8');
+    return { saved: true };
+  });
+
+  ipcMain.handle('save-json', async (event, { filename, content }) => {
+    const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+      title:       'Save Full Backup',
+      defaultPath: filename,
+      filters:     [{ name: 'Backup Files', extensions: ['json'] }],
+    });
+    if (canceled || !filePath) return { saved: false };
+    fs.writeFileSync(filePath, content, 'utf8');
+    return { saved: true };
+  });
   createWindow();
 });
 

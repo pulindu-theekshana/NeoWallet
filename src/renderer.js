@@ -28,6 +28,223 @@ function debounce(fn, ms) {
   return debounced;
 }
 
+// ── Custom Dropdown ──────────────────────────────────────
+function buildDropdown(id, options, selectedValue) {
+  const sel = options.find(o => String(o.value) === String(selectedValue));
+  return `
+    <div class="cdd" id="${id}" data-value="${esc(String(selectedValue ?? ''))}">
+      <div class="cdd-trigger">
+        <span class="cdd-label">${esc(sel ? sel.label : (options[0]?.label || ''))}</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </div>
+      <div class="cdd-menu">
+        ${options.map(o => `
+          <div class="cdd-item ${String(o.value) === String(selectedValue) ? 'sel' : ''}"
+               data-value="${esc(String(o.value))}">${esc(o.label)}</div>
+        `).join('')}
+      </div>
+    </div>`;
+}
+
+function setupDropdowns() {
+  document.querySelectorAll('.cdd:not([data-wired])').forEach(dd => {
+    dd.dataset.wired = '1';
+    const trigger = dd.querySelector('.cdd-trigger');
+    const menu    = dd.querySelector('.cdd-menu');
+    const label   = dd.querySelector('.cdd-label');
+
+    trigger.addEventListener('click', e => {
+      e.stopPropagation();
+      const isOpen = menu.classList.contains('open');
+      document.querySelectorAll('.cdd-menu.open').forEach(m => m.classList.remove('open'));
+      document.querySelectorAll('.cdd-trigger.open').forEach(t => t.classList.remove('open'));
+      if (!isOpen) { menu.classList.add('open'); trigger.classList.add('open'); }
+    });
+
+    dd.querySelectorAll('.cdd-item').forEach(item => {
+      item.addEventListener('click', e => {
+        e.stopPropagation();
+        const value = item.dataset.value;
+        label.textContent = item.textContent.trim();
+        dd.dataset.value  = value;
+        menu.classList.remove('open');
+        trigger.classList.remove('open');
+        dd.querySelectorAll('.cdd-item').forEach(i => i.classList.remove('sel'));
+        item.classList.add('sel');
+        dd.dispatchEvent(new CustomEvent('change', { detail: { value } }));
+      });
+    });
+  });
+
+  if (!document._cddClickWired) {
+    document._cddClickWired = true;
+    document.addEventListener('click', () => {
+      document.querySelectorAll('.cdd-menu.open').forEach(m => m.classList.remove('open'));
+      document.querySelectorAll('.cdd-trigger.open').forEach(t => t.classList.remove('open'));
+    });
+  }
+}
+
+function getDropdownValue(id) {
+  const el = document.getElementById(id);
+  return el ? el.dataset.value : '';
+}
+
+function setDropdownValue(id, value) {
+  const dd = document.getElementById(id);
+  if (!dd) return;
+  const items = dd.querySelectorAll('.cdd-item');
+  items.forEach(i => i.classList.remove('sel'));
+  const item = Array.from(items).find(i => i.dataset.value === String(value));
+  if (!item) return;
+  dd.querySelector('.cdd-label').textContent = item.textContent.trim();
+  dd.dataset.value = String(value);
+  item.classList.add('sel');
+}
+
+// ── Custom Date Picker ───────────────────────────────────
+function dpFormat(val) {
+  if (!val) return 'Select date';
+  const [y, m, d] = val.split('-');
+  return `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1]} ${+d}, ${y}`;
+}
+
+function setDatePickerValue(id, value) {
+  const hidden  = document.getElementById(id);
+  const display = document.getElementById(`dp-display-${id}`);
+  if (hidden)  hidden.value        = value || '';
+  if (display) display.textContent = dpFormat(value);
+}
+
+function getDatePickerValue(id) {
+  const el = document.getElementById(id);
+  return el ? el.value : '';
+}
+
+function setupDatePickers() {
+  document.querySelectorAll('.datepicker:not([data-wired])').forEach(dp => {
+    dp.dataset.wired = '1';
+    const trigger = dp.querySelector('.dp-trigger');
+    const dpId    = dp.id.replace('dp-', '');
+    trigger.addEventListener('click', e => {
+      e.stopPropagation();
+      if (document.getElementById('dp-popup')) { closeDPPopup(); }
+      else { openDPPopup(dpId, trigger); }
+    });
+  });
+}
+
+function openDPPopup(inputId, trigger) {
+  closeDPPopup();
+  const val = document.getElementById(inputId)?.value || '';
+  let vy, vm;
+  if (val) { const [y,m] = val.split('-'); vy=+y; vm=+m-1; }
+  else     { vy = new Date().getFullYear(); vm = new Date().getMonth(); }
+
+  const popup = document.createElement('div');
+  popup.className = 'dp-popup';
+  popup.id        = 'dp-popup';
+  document.body.appendChild(popup);
+
+  const rect     = trigger.getBoundingClientRect();
+  const popupW   = 330;
+  const popupH   = 340;
+
+  // Try positioning to the right of the trigger first
+  let left = rect.right + 10;
+  let top  = rect.top;
+
+  // If it would go off the right edge, flip to left side
+  if (left + popupW > window.innerWidth - 10) {
+    left = rect.left - popupW - 10;
+  }
+
+  // Keep within vertical bounds — push up if it clips the bottom
+  if (top + popupH > window.innerHeight - 10) {
+    top = window.innerHeight - popupH - 10;
+  }
+  if (top < 10) top = 10;
+
+  popup.style.top  = top  + 'px';
+  popup.style.left = Math.max(10, left) + 'px';
+
+  trigger.classList.add('open');
+  renderDPCalendar(popup, inputId, vy, vm, val);
+  setTimeout(() => document.addEventListener('click', dpOutsideClick), 0);
+}
+
+function dpOutsideClick(e) {
+  const p = document.getElementById('dp-popup');
+  if (p && !p.contains(e.target)) closeDPPopup();
+}
+
+function closeDPPopup() {
+  const p = document.getElementById('dp-popup');
+  if (p) p.remove();
+  document.querySelectorAll('.dp-trigger.open').forEach(t => t.classList.remove('open'));
+  document.removeEventListener('click', dpOutsideClick);
+}
+
+function renderDPCalendar(popup, inputId, year, month, selectedVal) {
+  const MN = ['January','February','March','April','May','June',
+               'July','August','September','October','November','December'];
+  const WD  = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+  const today   = new Date();
+  const firstDow = new Date(year, month, 1).getDay();
+  const daysInM  = new Date(year, month+1, 0).getDate();
+  const daysInP  = new Date(year, month, 0).getDate();
+
+  let cells = '';
+  for (let i = firstDow-1; i >= 0; i--)
+    cells += `<div class="dp-cell dp-dim">${daysInP-i}</div>`;
+
+  for (let d = 1; d <= daysInM; d++) {
+    const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isT = today.getFullYear()===year && today.getMonth()===month && today.getDate()===d;
+    const isS = ds === selectedVal;
+    cells += `<div class="dp-cell ${isT?'dp-today':''} ${isS?'dp-sel':''}" data-ds="${ds}">${d}</div>`;
+  }
+
+  const total = Math.ceil((firstDow + daysInM) / 7) * 7;
+  for (let i = 1; i <= total - firstDow - daysInM; i++)
+    cells += `<div class="dp-cell dp-dim">${i}</div>`;
+
+  popup.innerHTML = `
+    <div class="dp-head">
+      <button class="dp-nav-btn" id="dp-pv">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+      </button>
+      <div class="dp-month-lbl">${MN[month]} ${year}</div>
+      <button class="dp-nav-btn" id="dp-nx">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      </button>
+    </div>
+    <div class="dp-wdays">${WD.map(d=>`<div class="dp-wd">${d}</div>`).join('')}</div>
+    <div class="dp-grid">${cells}</div>`;
+
+  popup.querySelector('#dp-pv').addEventListener('click', e => {
+    e.stopPropagation();
+    let m=month-1, y=year; if(m<0){m=11;y--;} renderDPCalendar(popup,inputId,y,m,selectedVal);
+  });
+  popup.querySelector('#dp-nx').addEventListener('click', e => {
+    e.stopPropagation();
+    let m=month+1, y=year; if(m>11){m=0;y++;} renderDPCalendar(popup,inputId,y,m,selectedVal);
+  });
+  popup.querySelectorAll('.dp-cell[data-ds]').forEach(cell => {
+    cell.addEventListener('click', e => {
+      e.stopPropagation();
+      setDatePickerValue(inputId, cell.dataset.ds);
+      closeDPPopup();
+    });
+  });
+}
+
 // ── App State ───────────────────────────────────────────────
 const S = {
   page:      'dashboard',
@@ -299,8 +516,6 @@ async function renderTransactions() {
     const catParam = S.catFilter ? `&category=${encodeURIComponent(S.catFilter)}` : '';
     const rows = await GET(`/transactions?month=${S.month}&year=${S.year}${catParam}`);
 
-    const catOptions = ['Groceries','Utilities','Transport','Dining','Shopping','Healthcare','Entertainment','Education','Sports','Other']
-      .map(c => `<option value="${c}" ${S.catFilter===c?'selected':''}>${c}</option>`).join('');
     // Apply search filter client-side
     const displayRows = rows.filter(t => {
       if (!S.search) return true;
@@ -320,10 +535,11 @@ async function renderTransactions() {
           <span style="font-weight:600;font-size:15px">${MONTHS[S.month-1]} ${S.year}</span>
           <button class="filter-select" id="t-next">&#9654;</button>
         </div>
-        <select class="filter-select" id="t-cat-filter">
-          <option value="" ${!S.catFilter?'selected':''}>All Categories</option>
-          ${catOptions}
-        </select>
+        ${buildDropdown('cdd-t-cat-filter', [
+          {value:'', label:'All Categories'},
+          ...['Groceries','Utilities','Transport','Dining','Shopping','Healthcare',
+              'Entertainment','Education','Sports','Other'].map(c=>({value:c,label:c}))
+        ], S.catFilter)}
         <input
           class="filter-select"
           id="t-search"
@@ -369,10 +585,16 @@ async function renderTransactions() {
             </table>`}
       </div>`;
 
+    setupDropdowns();
+
     document.getElementById('t-add').onclick  = () => openModal();
-    document.getElementById('t-prev').onclick = () => { prevMonth(() => { S.catFilter=''; renderTransactions(); }); };
-    document.getElementById('t-next').onclick = () => { nextMonth(() => { S.catFilter=''; renderTransactions(); }); };
-    document.getElementById('t-cat-filter').onchange = function() { S.catFilter = this.value; renderTransactions(); };
+    document.getElementById('t-prev').onclick = () => { prevMonth(() => { S.catFilter=''; S.search=''; renderTransactions(); }); };
+    document.getElementById('t-next').onclick = () => { nextMonth(() => { S.catFilter=''; S.search=''; renderTransactions(); }); };
+
+    document.getElementById('cdd-t-cat-filter').addEventListener('change', e => {
+      S.catFilter = e.detail.value;
+      renderTransactions();
+    });
 
     const debouncedSearch = debounce(async function(value) {
       S.search = value;
@@ -424,12 +646,13 @@ async function renderReports() {
   ['monthly','donut'].forEach(k => { if (S.charts[k]) { S.charts[k].destroy(); delete S.charts[k]; } });
 
   const el = document.getElementById('page-reports');
-  const yearOpts = [0,1,2].map(i => { const y = new Date().getFullYear()-i; return `<option value="${y}" ${y===S.year?'selected':''}>${y}</option>`; }).join('');
 
 el.innerHTML = `
     <div class="page-header">
       <h1 class="page-title">Reports</h1>
-      <select class="filter-select" id="r-year">${yearOpts}</select>
+      ${buildDropdown('cdd-r-year',
+        [0,1,2].map(i=>{ const y=new Date().getFullYear()-i; return {value:String(y),label:String(y)}; }),
+        String(S.year))}
     </div>
     <div class="reports-grid">
       <div class="card chart-card" id="monthly-card">
@@ -460,7 +683,8 @@ el.innerHTML = `
       </div>
     </div>`;
 
-  document.getElementById('r-year').onchange = function() { S.year = +this.value; renderReports(); };
+  setupDropdowns();
+  document.getElementById('cdd-r-year').addEventListener('change', e => { S.year = +e.detail.value; renderReports(); });
 
   try {
     const d = await GET('/reports?year=' + S.year);
@@ -472,7 +696,7 @@ el.innerHTML = `
       data: {
         labels: d.monthly_spending.map(r => MONTHS[+r.month-1].slice(0,3)),
         datasets: [{ label: 'LKR', data: d.monthly_spending.map(r => r.total),
-          backgroundColor: '#6366f1', borderRadius: 6 }]
+          backgroundColor: '#0060e0', borderRadius: 6 }]
       },
       options: {
         responsive: true, maintainAspectRatio: false,
@@ -567,7 +791,7 @@ function openChartModal(type, data) {
         datasets: [{
           label: 'LKR',
           data: data.monthly_spending.map(r => r.total),
-          backgroundColor: '#6366f1',
+          backgroundColor: '#0060e0',
           borderRadius: 8,
         }]
       },
@@ -648,18 +872,35 @@ async function renderBudgets() {
   try {
     const budgets = await GET('/budgets');
     const cur = budgets.find(b => +b.month === S.month && +b.year === S.year);
-    const monthOpts = MONTHS.map((m,i) => `<option value="${i+1}" ${i+1===S.month?'selected':''}>${m}</option>`).join('');
-    const yearOpts  = [1,0,-1].map(i => { const y=new Date().getFullYear()+i; return `<option value="${y}" ${y===S.year?'selected':''}>${y}</option>`; }).join('');
-
+     
     el.innerHTML = `
       <div class="page-header"><h1 class="page-title">Budgets</h1></div>
       <div class="budgets-layout">
         <div class="card">
           <div class="card-title">Set Monthly Budget</div>
           <div class="budget-form">
-            <div class="form-group"><label>Month</label><select id="b-month">${monthOpts}</select></div>
-            <div class="form-group"><label>Year</label><select id="b-year">${yearOpts}</select></div>
-            <div class="form-group"><label>Budget Amount (LKR)</label><input type="number" id="b-amount" placeholder="e.g. 60000" value="${cur ? cur.amount : ''}"></div>
+            <div class="form-group"><label>Month</label>
+              ${buildDropdown('cdd-b-month', MONTHS.map((m,i)=>({value:String(i+1),label:m})), String(S.month))}
+            </div>
+            <div class="form-group"><label>Year</label>
+              ${buildDropdown('cdd-b-year',
+                [1,0,-1].map(i=>{const y=new Date().getFullYear()+i;return{value:String(y),label:String(y)};}),
+                String(S.year))}
+            </div>
+            <div class="form-group">
+              <label>Budget Amount (LKR)</label>
+              <div class="num-wrap">
+                <input type="number" id="b-amount" placeholder="e.g. 60000" value="${cur ? cur.amount : ''}">
+                <div class="num-btns">
+                  <button class="num-btn" onclick="adjNum('b-amount', 5000)" type="button">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+                  </button>
+                  <button class="num-btn" onclick="adjNum('b-amount', -5000)" type="button">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
             <button class="btn-primary" id="b-save">Save Budget</button>
           </div>
         </div>
@@ -681,20 +922,23 @@ async function renderBudgets() {
         </div>
       </div>`;
 
-    // When month/year changes, pre-fill existing budget amount
+
+    setupDropdowns();
+
     const refill = async () => {
-      const m = +document.getElementById('b-month').value;
-      const y = +document.getElementById('b-year').value;
+      const m = +getDropdownValue('cdd-b-month');
+      const y = +getDropdownValue('cdd-b-year');
       const buds = await GET('/budgets');
       const found = buds.find(b => +b.month === m && +b.year === y);
       document.getElementById('b-amount').value = found ? found.amount : '';
     };
-    document.getElementById('b-month').onchange = refill;
-    document.getElementById('b-year').onchange  = refill;
+
+    document.getElementById('cdd-b-month').addEventListener('change', refill);
+    document.getElementById('cdd-b-year').addEventListener('change',  refill);
 
     document.getElementById('b-save').onclick = async () => {
-      const month  = String(document.getElementById('b-month').value).padStart(2,'0');
-      const year   = +document.getElementById('b-year').value;
+      const month  = String(getDropdownValue('cdd-b-month')).padStart(2,'0');
+      const year   = +getDropdownValue('cdd-b-year');
       const amount = +document.getElementById('b-amount').value;
       if (!amount || amount <= 0) { toast('Enter a valid amount', 'error'); return; }
       await POST('/budgets', { month, year, amount });
@@ -721,7 +965,7 @@ function renderSettings() {
       <div class="settings-section">
         <h3>Data</h3>
         <div class="settings-row">
-          <span class="settings-key">Export all transactions to CSV</span>
+          <span class="settings-key">Export transactions to CSV</span>
           <button class="btn-primary" id="s-export">Export CSV</button>
         </div>
         <div class="settings-row">
@@ -729,6 +973,21 @@ function renderSettings() {
           <button class="btn-primary" id="s-import" style="background:var(--bg-elevated);border:1px solid var(--border)">Import CSV</button>
         </div>
         <input type="file" id="s-import-file" accept=".csv" style="display:none">
+        <div class="settings-row">
+          <span class="settings-key">
+            Full backup
+            <span style="font-size:11px;color:var(--text-muted);display:block;margin-top:2px">Includes transactions AND budgets</span>
+          </span>
+          <button class="btn-primary" id="s-backup" style="background:var(--bg-elevated);border:1px solid var(--accent)">Backup All</button>
+        </div>
+        <div class="settings-row">
+          <span class="settings-key">
+            Restore full backup
+            <span style="font-size:11px;color:var(--text-muted);display:block;margin-top:2px">Replaces ALL current data</span>
+          </span>
+          <button class="btn-primary" id="s-restore" style="background:var(--bg-elevated);border:1px solid var(--border)">Restore Backup</button>
+        </div>
+        <input type="file" id="s-restore-file" accept=".json" style="display:none">
         <div class="settings-row">
           <span class="settings-key" style="color:var(--red)">Clear all data</span>
           <button class="btn-danger" id="s-clear">Clear Data</button>
@@ -745,11 +1004,8 @@ function renderSettings() {
     try {
       const rows = await GET('/transactions');
 
-      // Properly escape a CSV field — wraps in quotes and escapes inner quotes
       const csvField = v => {
-        // Replace newlines with a space so the import parser never sees multiline fields
         const s = String(v ?? '').replace(/[\r\n]+/g, ' ');
-        // If field contains comma or quote — wrap in quotes and escape inner quotes
         if (s.includes(',') || s.includes('"')) {
           return '"' + s.replace(/"/g, '""') + '"';
         }
@@ -767,11 +1023,14 @@ function renderSettings() {
         ].join(','))
       ].join('\n');
 
-      const a = document.createElement('a');
-      a.href = 'data:text/csv,' + encodeURIComponent(csv);
-      a.download = `expenses_${new Date().toISOString().slice(0,10)}.csv`;
-      a.click();
-      toast('Exported!');
+      const filename = `expenses_${new Date().toISOString().slice(0,10)}.csv`;
+      const result   = await window.electronAPI.saveCSV(filename, csv);
+
+      if (result.saved) {
+        toast('CSV exported successfully!');
+      }
+      // If user cancelled the save dialog — show nothing
+
     } catch { toast('Export failed', 'error'); }
   };
   document.getElementById('s-import').onclick = () => {
@@ -843,6 +1102,45 @@ function renderSettings() {
     }
   };
 
+// ── Full backup (transactions + budgets) ──
+  document.getElementById('s-backup').onclick = async () => {
+    try {
+      const data     = await GET('/backup');
+      const content  = JSON.stringify(data, null, 2);
+      const filename = `neowallet_backup_${new Date().toISOString().slice(0,10)}.json`;
+      const result   = await window.electronAPI.saveJSON(filename, content);
+      if (result.saved) toast('Full backup saved!');
+    } catch { toast('Backup failed', 'error'); }
+  };
+
+  // ── Restore full backup ──
+  document.getElementById('s-restore').onclick = () => {
+    document.getElementById('s-restore-file').click();
+  };
+
+  document.getElementById('s-restore-file').onchange = async function () {
+    const file = this.files[0];
+    if (!file) return;
+
+    const yes = await customConfirm(
+      'Restore backup?',
+      'This will replace ALL current transactions and budgets with the backup data.',
+      'Restore'
+    );
+    if (!yes) { this.value = ''; return; }
+
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      const result = await POST('/restore', data);
+      toast(`Restored ${result.transactions_restored} transactions and ${result.budgets_restored} budgets!`);
+      this.value = '';
+      navigate('dashboard');
+    } catch {
+      toast('Restore failed — invalid backup file', 'error');
+    }
+  };  
+
 document.getElementById('s-clear').onclick = async () => {
     const yes = await customConfirm(
       'Clear all data?',
@@ -870,8 +1168,8 @@ function openModal(t = null) {
   document.getElementById('trans-id').value       = t?.id     || '';
   document.getElementById('trans-title').value    = t?.title  || '';
   document.getElementById('trans-amount').value   = t?.amount || '';
-  document.getElementById('trans-category').value = t?.category || 'Groceries';
-  document.getElementById('trans-date').value     = t?.date   || new Date().toISOString().slice(0,10);
+  setDropdownValue('cdd-trans-category', t?.category || 'Groceries');
+  setDatePickerValue('trans-date', t?.date || new Date().toISOString().slice(0,10));
   document.getElementById('trans-note').value     = t?.note   || '';
   document.getElementById('modal-overlay').classList.remove('hidden');
   document.getElementById('trans-title').focus();
@@ -879,14 +1177,15 @@ function openModal(t = null) {
 
 function closeModal() {
   document.getElementById('modal-overlay').classList.add('hidden');
+  closeDPPopup();
   S.editId = null;
 }
 
 async function saveModal() {
   const title    = document.getElementById('trans-title').value.trim();
   const amount   = parseFloat(document.getElementById('trans-amount').value);
-  const category = document.getElementById('trans-category').value;
-  const date     = document.getElementById('trans-date').value;
+  const category = getDropdownValue('cdd-trans-category');
+  const date     = getDatePickerValue('trans-date');
   const note     = document.getElementById('trans-note').value.trim();
 
   if (!title)            { toast('Please enter a title', 'error');  return; }
@@ -916,6 +1215,14 @@ function nextMonth(cb) {
   cb();
 }
 
+// Adjusts a number input by step — used by custom spinners
+function adjNum(id, step) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const current = parseFloat(el.value) || 0;
+  el.value = Math.max(0, current + step);
+}
+
 function errState(msg) {
   return `<div class="empty"><div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div><p>${msg}</p></div>`;
 }
@@ -937,6 +1244,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       this.setSelectionRange(pos, pos);
     }
   });
+  setupDropdowns();
+  setupDatePickers();
   document.getElementById('modal-close').onclick = closeModal;
   document.getElementById('btn-cancel').onclick  = closeModal;
   document.getElementById('btn-save').onclick    = saveModal;
@@ -952,6 +1261,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const loader = document.getElementById('loading-screen');
   const ready  = await waitForBackend();
+
+  // Complete the loading bar before hiding
+  const bar = document.getElementById('loading-bar');
+  if (bar) { bar.style.animation = 'none'; bar.style.width = '100%'; }
+  await new Promise(r => setTimeout(r, 500));
   loader.classList.add('hidden');
 
   if (ready) {
